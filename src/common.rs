@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use futures_util::StreamExt;
 use std::borrow::Cow;
 use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
+use terminal_size::{terminal_size, Width};
 
 #[derive(Debug)]
 pub enum DownloadError {
@@ -190,8 +191,17 @@ pub async fn download_file_from_armory(
     }
 
     let pb = ProgressBar::hidden();
+    let terminal_width = terminal_size()
+    .map(|(Width(w), _)| w as usize)
+    .unwrap_or(80);
+    let _bar_width = (terminal_width.saturating_sub(45))
+    .clamp(10, terminal_width.saturating_sub(45));
+
     pb.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [\x1b[34m{elapsed_precise}\x1b[0m] [{bar:40.cyan/blue}] \x1b[33m{bytes}\x1b[0m / \x1b[35m{total_bytes}\x1b[0m (\x1b[36m{eta}\x1b[0m)")
+        .template(&format!(
+            "{{spinner:.green}} {{elapsed_precise}} [{{bar:{}.cyan/blue}}] {{bytes}} / {{total_bytes}} ({{eta}})",
+            _bar_width
+        ))
         .progress_chars("=>-"));
 
     let mut request = client
